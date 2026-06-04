@@ -6,9 +6,8 @@ export default async function handler(req, res) {
 
   try {
     const { query } = req.body;
-    
     const response = await fetch(
-      `https://asos10.p.rapidapi.com/api/v1/getProductList?q=${encodeURIComponent(query)}&country=FR&lang=fr-FR&currency=EUR&sizeSchema=FR&limit=20`,
+      `https://asos10.p.rapidapi.com/api/v1/getProductListBySearchTerm?searchTerm=${encodeURIComponent(query)}&currency=EUR&country=FR&store=FR&languageShort=fr&sizeSchema=FR&limit=20&offset=0&sort=recommended`,
       {
         method: "GET",
         headers: {
@@ -17,10 +16,8 @@ export default async function handler(req, res) {
         }
       }
     );
-
     const data = await response.json();
-    // Renvoyer toute la structure pour debug
-    res.status(200).json({ raw: JSON.stringify(data).slice(0, 1000), data });
+    res.status(200).json({ debug: JSON.stringify(data).slice(0,300), data });
   } catch(e) {
     res.status(500).json({ error: e.message });
   }
