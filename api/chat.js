@@ -7,7 +7,7 @@ export default async function handler(req, res) {
   try {
     const { query } = req.body;
     const response = await fetch(
-      `https://asos10.p.rapidapi.com/api/v1/getProductListBySearchTerm?searchTerm=${encodeURIComponent(query)}&currency=EUR&country=FR&store=FR&languageShort=fr&sizeSchema=FR&limit=20&offset=0&sort=recommended`,
+      `https://asos10.p.rapidapi.com/api/v1/getProductListBySearchTerm?searchTerm=${encodeURIComponent(query)}&currency=EUR&country=FR&store=FR&languageShort=fr&sizeSchema=FR&limit=3&offset=0&sort=recommended`,
       {
         method: "GET",
         headers: {
@@ -17,7 +17,13 @@ export default async function handler(req, res) {
       }
     );
     const data = await response.json();
-    res.status(200).json({ debug: JSON.stringify(data).slice(0,300), data });
+    // Renvoyer le premier produit complet pour voir sa structure
+    const items = data?.products || data?.data?.products || data?.results || [];
+    res.status(200).json({ 
+      firstProduct: items[0] || null,
+      keys: items[0] ? Object.keys(items[0]) : [],
+      data 
+    });
   } catch(e) {
     res.status(500).json({ error: e.message });
   }
