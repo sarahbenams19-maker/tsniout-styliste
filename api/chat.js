@@ -6,7 +6,7 @@ export default async function handler(req, res) {
 
   try {
     const { prompt } = req.body;
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
     
     const response = await fetch(url, {
       method: "POST",
@@ -18,10 +18,10 @@ export default async function handler(req, res) {
     });
 
     const raw = await response.text();
-    console.log("RAW:", raw.slice(0, 500));
     const data = JSON.parse(raw);
     const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
-    res.status(200).json({ text, debug: raw.slice(0, 200) });
+    if (!text) return res.status(200).json({ text: "", debug: raw.slice(0, 300) });
+    res.status(200).json({ text });
   } catch(e) {
     res.status(500).json({ text: "", error: e.message });
   }
