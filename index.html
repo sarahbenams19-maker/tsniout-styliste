@@ -12,10 +12,8 @@
 body{background:#0f0a0a;min-height:100vh;font-family:Georgia,serif;color:#f5e6d3;}
 .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;padding:16px;}
 @media(min-width:600px){.grid{grid-template-columns:repeat(3,1fr);}}
-@media(min-width:900px){.grid{grid-template-columns:repeat(4,1fr);}}
-.card{background:#1a0f0f;border:1px solid rgba(201,149,106,0.2);border-radius:12px;overflow:hidden;transition:transform 0.2s;}
-.card:hover{transform:translateY(-3px);}
-.card img{width:100%;aspect-ratio:3/4;object-fit:cover;}
+.card{background:#1a0f0f;border:1px solid rgba(201,149,106,0.2);border-radius:12px;overflow:hidden;}
+.card img{width:100%;aspect-ratio:3/4;object-fit:cover;background:#2a1515;}
 .card-info{padding:10px;}
 .card-name{font-size:12px;color:#f5e6d3;margin-bottom:4px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
 .card-price{font-size:14px;color:#c9956a;font-weight:600;margin-bottom:8px;}
@@ -23,11 +21,11 @@ body{background:#0f0a0a;min-height:100vh;font-family:Georgia,serif;color:#f5e6d3
 .search-bar{display:flex;gap:10px;padding:16px;max-width:600px;margin:0 auto;}
 .search-input{flex:1;padding:14px 18px;background:rgba(255,255,255,0.05);border:1px solid rgba(201,149,106,0.3);border-radius:12px;color:#f5e6d3;font-size:15px;font-family:Georgia,serif;outline:none;}
 .search-input::placeholder{color:#5a4030;}
-.search-btn{padding:14px 24px;background:linear-gradient(135deg,#c9956a,#a07040);border:none;border-radius:12px;color:#fff;font-size:14px;cursor:pointer;font-family:Georgia,serif;white-space:nowrap;}
+.search-btn{padding:14px 24px;background:linear-gradient(135deg,#c9956a,#a07040);border:none;border-radius:12px;color:#fff;font-size:14px;cursor:pointer;font-family:Georgia,serif;}
 .tag{display:inline-block;padding:6px 14px;background:rgba(201,149,106,0.1);border:1px solid rgba(201,149,106,0.25);border-radius:20px;color:#c9956a;font-size:12px;cursor:pointer;margin:4px;}
-.tag:hover{background:rgba(201,149,106,0.2);}
 .loading{text-align:center;padding:60px;color:#c9956a;font-size:14px;}
-.empty{text-align:center;padding:60px;color:#7a6050;font-size:14px;}
+.empty{text-align:center;padding:40px;color:#7a6050;font-size:14px;}
+.debug{font-size:10px;color:#3a2020;margin-top:8px;word-break:break-all;padding:0 16px;}
 </style>
 </head>
 <body>
@@ -36,42 +34,58 @@ body{background:#0f0a0a;min-height:100vh;font-family:Georgia,serif;color:#f5e6d3
 const {useState} = React;
 
 const SUGGESTIONS = [
-  "long black skirt","midi dress","long sleeve top",
-  "modest dress","maxi skirt","pleated midi skirt",
-  "blazer women","wide leg trousers","wedding guest dress",
-  "long sleeve blouse","flowy maxi dress","autumn dress"
+  "modest dress","long black skirt","maxi skirt",
+  "long sleeve top","midi dress","modest blouse",
+  "wide leg trousers","long cardigan","modest jumpsuit"
 ];
 
 function extractProducts(data) {
   if (!data) return [];
-  // Essayer toutes les structures possibles
   if (Array.isArray(data)) return data;
-  if (data.products && Array.isArray(data.products)) return data.products;
-  if (data.data && Array.isArray(data.data)) return data.data;
-  if (data.data && data.data.products) return data.data.products;
-  if (data.results && Array.isArray(data.results)) return data.results;
-  if (data.items && Array.isArray(data.items)) return data.items;
-  // Chercher récursivement le premier tableau
+  if (data.products) return data.products;
+  if (data.data?.products) return data.data.products;
+  if (data.results) return data.results;
+  if (data.items) return data.items;
   for (const key of Object.keys(data)) {
     if (Array.isArray(data[key]) && data[key].length > 0) return data[key];
+    if (data[key] && typeof data[key] === 'object') {
+      for (const k2 of Object.keys(data[key])) {
+        if (Array.isArray(data[key][k2]) && data[key][k2].length > 0) return data[key][k2];
+      }
+    }
   }
   return [];
 }
 
-function getProductInfo(p) {
-  const name = p.name || p.title || "";
-  const price = p.price?.current?.text || 
-                (p.price?.current?.value ? p.price.current.value + "€" : "") ||
-                p.priceLabel || "";
-  const imgBase = p.imageUrl || p.images?.[0]?.url || "";
-  const img = imgBase ? (imgBase.startsWith("http") ? imgBase : "https://" + imgBase) : "";
-  const productId = p.id || "";
-  const url = productId 
-    ? `https://www.asos.com/fr/${p.url || "product/" + productId}`
-    : `https://www.asos.com/fr/search/?q=${encodeURIComponent(name)}`;
-  return { name, price, img, url };
+function getImg(p) {
+  let img = p.imageUrl || p.image || p.thumbnail || "";
+  if (!img && p.images) {
+    if (Array.isArray(p.images)) img = p.images[0]?.url || p.images[0] || "";
+    else if (typeof p.images === 'string') img = p.images;
+  }
+  if (img && !img.startsWith("http")) img = "https://" + img;
+  return img;
 }
 
+function getUrl(p) {
+  const id = p.id || p.productId || "";
+  const slug = p.url || p.link || p.href || "";
+  if (slug.startsWith("http")) return slug;
+  if (slug) return "https://www.asos.com" + (slug.startsWith("/") ? "" : "/") + slug;
+  if (id) return `https://www.asos.com/fr/prd/${id}`;
+  return "https://www.asos.com/fr/";
+}
+
+function getPrice(p) {
+  if (p.price?.current?.text) return p.price.current.text;
+  if (p.price?.current?.value) return p.price.current.value + " €";
+  if (p.price?.formatted) return p.price.formatted;
+  if (p.currentPrice) return p.currentPrice;
+  if (p.priceLabel) return p.priceLabel;
+  if (typeof p.price === 'string') return p.price;
+  if (typeof p.price === 'number') return p.price + " €";
+  return "";
+}
 
 function App(){
   const [query, setQuery] = useState("");
@@ -79,7 +93,7 @@ function App(){
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
   const [error, setError] = useState("");
-  const [debugMsg, setDebugMsg] = useState("");
+  const [debug, setDebug] = useState("");
 
   const search = async (q) => {
     const term = q || query;
@@ -88,7 +102,7 @@ function App(){
     setSearched(true);
     setError("");
     setProducts([]);
-    setDebugMsg("");
+    setDebug("");
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
@@ -96,10 +110,10 @@ function App(){
         body: JSON.stringify({query: term})
       });
       const json = await res.json();
-      setDebugMsg(json.debug || "");
+      setDebug(json.firstProduct || "");
       const items = extractProducts(json.data || json);
       if(items.length === 0) {
-        setError("Aucun produit trouvé. Essaie en anglais (ex: long black skirt)");
+        setError("Aucun produit trouvé pour \"" + term + "\"");
       } else {
         setProducts(items);
       }
@@ -121,40 +135,27 @@ function App(){
       </div>
 
       <div className="search-bar">
-        <input
-          className="search-input"
-          type="text"
-          placeholder="Ex: long black skirt, midi dress..."
-          value={query}
-          onChange={e => setQuery(e.target.value)}
-          onKeyDown={e => e.key==="Enter" && search()}
-        />
-        <button className="search-btn" onClick={() => search()}>Rechercher</button>
+        <input className="search-input" type="text" placeholder="Ex: modest dress, maxi skirt..."
+          value={query} onChange={e=>setQuery(e.target.value)}
+          onKeyDown={e=>e.key==="Enter"&&search()}/>
+        <button className="search-btn" onClick={()=>search()}>Rechercher</button>
       </div>
 
       {!searched && (
         <div style={{textAlign:"center",padding:"8px 16px 24px"}}>
           <p style={{color:"#5a4030",fontSize:12,marginBottom:10}}>Suggestions :</p>
-          <div>
-            {SUGGESTIONS.map(s => (
-              <span key={s} className="tag" onClick={() => { setQuery(s); search(s); }}>{s}</span>
-            ))}
-          </div>
+          {SUGGESTIONS.map(s=>(
+            <span key={s} className="tag" onClick={()=>{setQuery(s);search(s);}}>{s}</span>
+          ))}
         </div>
       )}
 
-      {loading && (
-        <div className="loading">
-          <div style={{fontSize:30,marginBottom:12}}>✦</div>
-          <p>Recherche en cours...</p>
-        </div>
-      )}
+      {loading && <div className="loading"><div style={{fontSize:30,marginBottom:12}}>✦</div><p>Recherche en cours...</p></div>}
 
       {error && !loading && (
         <div className="empty">
-          <div style={{fontSize:30,marginBottom:12}}>🔍</div>
           <p>{error}</p>
-          {debugMsg && <p style={{fontSize:10,color:"#3a2020",marginTop:8,wordBreak:"break-all"}}>{debugMsg}</p>}
+          {debug && <p className="debug">{debug}</p>}
         </div>
       )}
 
@@ -164,17 +165,21 @@ function App(){
             {products.length} produits pour "{query}"
           </div>
           <div className="grid">
-            {products.map((p, i) => {
-              const {name, price, img, url} = getProductInfo(p);
-              return (
+            {products.map((p,i)=>{
+              const img=getImg(p);
+              const url=getUrl(p);
+              const price=getPrice(p);
+              const name=p.name||p.title||p.description||"Produit";
+              return(
                 <div key={i} className="card">
-                  {img && <img src={img} alt={name} loading="lazy" onError={e => e.target.style.display="none"}/>}
+                  {img
+                    ? <img src={img} alt={name} loading="lazy" onError={e=>e.target.style.display="none"}/>
+                    : <div style={{width:"100%",aspectRatio:"3/4",background:"#2a1515",display:"flex",alignItems:"center",justifyContent:"center",color:"#5a4030",fontSize:11}}>Image non disponible</div>
+                  }
                   <div className="card-info">
                     <div className="card-name">{name}</div>
-                    {price && <div className="card-price">{price}</div>}
-                    <a href={url} target="_blank" rel="noopener noreferrer" className="card-btn">
-                      Voir sur ASOS →
-                    </a>
+                    {price&&<div className="card-price">{price}</div>}
+                    <a href={url} target="_blank" rel="noopener noreferrer" className="card-btn">Voir sur ASOS →</a>
                   </div>
                 </div>
               );
