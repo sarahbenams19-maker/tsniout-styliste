@@ -12,6 +12,7 @@
 body{background:#0f0a0a;min-height:100vh;font-family:Georgia,serif;color:#f5e6d3;}
 .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;padding:16px;}
 @media(min-width:600px){.grid{grid-template-columns:repeat(3,1fr);}}
+@media(min-width:900px){.grid{grid-template-columns:repeat(4,1fr);}}
 .card{background:#1a0f0f;border:1px solid rgba(201,149,106,0.2);border-radius:12px;overflow:hidden;}
 .card img{width:100%;aspect-ratio:3/4;object-fit:cover;background:#2a1515;}
 .card-info{padding:10px;}
@@ -25,7 +26,6 @@ body{background:#0f0a0a;min-height:100vh;font-family:Georgia,serif;color:#f5e6d3
 .tag{display:inline-block;padding:6px 14px;background:rgba(201,149,106,0.1);border:1px solid rgba(201,149,106,0.25);border-radius:20px;color:#c9956a;font-size:12px;cursor:pointer;margin:4px;}
 .loading{text-align:center;padding:60px;color:#c9956a;font-size:14px;}
 .empty{text-align:center;padding:40px;color:#7a6050;font-size:14px;}
-.debug{font-size:10px;color:#3a2020;margin-top:8px;word-break:break-all;padding:0 16px;}
 </style>
 </head>
 <body>
@@ -33,57 +33,33 @@ body{background:#0f0a0a;min-height:100vh;font-family:Georgia,serif;color:#f5e6d3
 <script type="text/babel">
 const {useState} = React;
 
+const RAPIDAPI_KEY = "a6b28af1ebmsh650165ce4116d0fp11c73bjsn42c3f57b3eba";
+
 const SUGGESTIONS = [
   "modest dress","long black skirt","maxi skirt",
   "long sleeve top","midi dress","modest blouse",
-  "wide leg trousers","long cardigan","modest jumpsuit"
+  "wide leg trousers","long cardigan","pleated midi skirt"
 ];
 
-function extractProducts(data) {
-  if (!data) return [];
-  if (Array.isArray(data)) return data;
-  if (data.products) return data.products;
-  if (data.data?.products) return data.data.products;
-  if (data.results) return data.results;
-  if (data.items) return data.items;
-  for (const key of Object.keys(data)) {
-    if (Array.isArray(data[key]) && data[key].length > 0) return data[key];
-    if (data[key] && typeof data[key] === 'object') {
-      for (const k2 of Object.keys(data[key])) {
-        if (Array.isArray(data[key][k2]) && data[key][k2].length > 0) return data[key][k2];
-      }
-    }
-  }
-  return [];
-}
-
 function getImg(p) {
-  let img = p.imageUrl || p.image || p.thumbnail || "";
-  if (!img && p.images) {
-    if (Array.isArray(p.images)) img = p.images[0]?.url || p.images[0] || "";
-    else if (typeof p.images === 'string') img = p.images;
-  }
+  let img = p.imageUrl || p.image || "";
+  if (!img && p.images) img = Array.isArray(p.images) ? (p.images[0]?.url || p.images[0] || "") : "";
   if (img && !img.startsWith("http")) img = "https://" + img;
   return img;
 }
 
 function getUrl(p) {
-  const id = p.id || p.productId || "";
-  const slug = p.url || p.link || p.href || "";
+  const slug = p.url || "";
   if (slug.startsWith("http")) return slug;
   if (slug) return "https://www.asos.com" + (slug.startsWith("/") ? "" : "/") + slug;
-  if (id) return `https://www.asos.com/fr/prd/${id}`;
-  return "https://www.asos.com/fr/";
+  if (p.id) return `https://www.asos.com/prd/${p.id}`;
+  return "https://www.asos.com/";
 }
 
 function getPrice(p) {
   if (p.price?.current?.text) return p.price.current.text;
-  if (p.price?.current?.value) return p.price.current.value + " €";
-  if (p.price?.formatted) return p.price.formatted;
-  if (p.currentPrice) return p.currentPrice;
-  if (p.priceLabel) return p.priceLabel;
+  if (p.price?.current?.value) return p.price.current.value + " $";
   if (typeof p.price === 'string') return p.price;
-  if (typeof p.price === 'number') return p.price + " €";
   return "";
 }
 
@@ -93,7 +69,6 @@ function App(){
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
   const [error, setError] = useState("");
-  const [debug, setDebug] = useState("");
 
   const search = async (q) => {
     const term = q || query;
@@ -102,21 +77,19 @@ function App(){
     setSearched(true);
     setError("");
     setProducts([]);
-    setDebug("");
     try {
-      const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({query: term})
+      const url = `https://asos10.p.rapidapi.com/api/v1/getProductListBySearchTerm?searchTerm=${encodeURIComponent(term)}&currency=USD&country=US&store=US&languageShort=en&sizeSchema=US&limit=20&offset=0&sort=recommended`;
+      const res = await fetch(url, {
+        method: "GET",
+        headers: {
+          "x-rapidapi-host": "asos10.p.rapidapi.com",
+          "x-rapidapi-key": RAPIDAPI_KEY
+        }
       });
-      const json = await res.json();
-      setDebug(json.firstProduct || "");
-      const items = json.products || [];
-      if(items.length === 0) {
-        setError("Aucun produit trouvé pour \"" + term + "\"");
-      } else {
-        setProducts(items);
-      }
+      const data = await res.json();
+      const items = data?.data?.products || [];
+      if(items.length === 0) setError("Aucun produit trouvé pour \"" + term + "\"");
+      else setProducts(items);
     } catch(e) {
       setError("Erreur: " + e.message);
     } finally {
@@ -151,13 +124,7 @@ function App(){
       )}
 
       {loading && <div className="loading"><div style={{fontSize:30,marginBottom:12}}>✦</div><p>Recherche en cours...</p></div>}
-
-      {error && !loading && (
-        <div className="empty">
-          <p>{error}</p>
-          {debug && <p className="debug">{debug}</p>}
-        </div>
-      )}
+      {error && !loading && <div className="empty"><p>{error}</p></div>}
 
       {!loading && products.length > 0 && (
         <>
@@ -169,12 +136,12 @@ function App(){
               const img=getImg(p);
               const url=getUrl(p);
               const price=getPrice(p);
-              const name=p.name||p.title||p.description||"Produit";
+              const name=p.name||p.title||"Produit";
               return(
                 <div key={i} className="card">
                   {img
                     ? <img src={img} alt={name} loading="lazy" onError={e=>e.target.style.display="none"}/>
-                    : <div style={{width:"100%",aspectRatio:"3/4",background:"#2a1515",display:"flex",alignItems:"center",justifyContent:"center",color:"#5a4030",fontSize:11}}>Image non disponible</div>
+                    : <div style={{width:"100%",aspectRatio:"3/4",background:"#2a1515"}}/>
                   }
                   <div className="card-info">
                     <div className="card-name">{name}</div>
