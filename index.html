@@ -41,15 +41,13 @@ function getLink(m){
 }
 
 function safeParseJSON(text){
-  const cleaned=text
-    .replace(/```json/gi,"")
-    .replace(/```/g,"")
-    .replace(/[\u0000-\u001F\u007F]/g," ")
-    .trim();
-  const match=cleaned.match(/\{[\s\S]*\}/);
-  if(!match)throw new Error("Pas de JSON trouvé");
-  return JSON.parse(match[0]);
+  const t=text.replace(/```json/gi,"").replace(/```/g,"").trim();
+  try { return JSON.parse(t); } catch(e) {}
+  const match=t.match(/\{[\s\S]*\}/);
+  if(match) return JSON.parse(match[0]);
+  throw new Error("Format non reconnu");
 }
+
 
 function App(){
   const [step,setStep]=useState(0);
