@@ -67,13 +67,14 @@ Marques autorisées UNIQUEMENT : Zara, Mango, Asos, La Redoute, Modanisa, Shein,
 Réponds UNIQUEMENT en JSON valide sans backticks ni markdown :
 {"titre":"...","description":"...","pieces":[{"type":"...","description":"...","marque":"...","prix_estime":"...","pourquoi_tsniout":"..."}],"conseil_styliste":"...","palette":["#hex1","#hex2","#hex3"]}`;
     try{
-      const res=await fetch("https://api.anthropic.com/v1/messages",{
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1200,messages:[{role:"user",content:prompt}]})
-      });
-      const data=await res.json();
-      const text=(data.content||[]).map(b=>b.text||"").join("");
+  const res = await fetch("/api/chat",{
+  method:"POST",
+  headers:{"Content-Type":"application/json"},
+  body:JSON.stringify({prompt})
+});
+const data=await res.json();
+const text=data.text||"";
+
       const match=text.match(/\{[\s\S]*\}/);
       if(!match)throw new Error("Format inattendu");
       setResult(JSON.parse(match[0]));setStep(6);
