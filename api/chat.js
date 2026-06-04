@@ -19,7 +19,8 @@ export default async function handler(req, res) {
     );
 
     const data = await response.json();
-    res.status(200).json(data);
+    // Renvoyer toute la structure pour debug
+    res.status(200).json({ raw: JSON.stringify(data).slice(0, 1000), data });
   } catch(e) {
     res.status(500).json({ error: e.message });
   }
