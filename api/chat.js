@@ -25,7 +25,15 @@ export default async function handler(req, res) {
     const data = JSON.parse(raw);
     const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
     if (!text) return res.status(200).json({ text: "", debug: raw.slice(0, 300) });
-    res.status(200).json({ text });
+    
+    // Vérifier que c'est du JSON valide et le renvoyer directement
+    try {
+      JSON.parse(text);
+      res.status(200).json({ text });
+    } catch(e) {
+      // Si pas valide, envoyer quand même pour que le client tente de parser
+      res.status(200).json({ text });
+    }
   } catch(e) {
     res.status(500).json({ text: "", error: e.message });
   }
