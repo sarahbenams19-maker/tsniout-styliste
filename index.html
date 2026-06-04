@@ -81,7 +81,9 @@ let parsed;
 try {
   const clean=text.replace(/```json/g,"").replace(/```/g,"").trim();
   const match=clean.match(/\{[\s\S]*\}/);
-  parsed=JSON.parse(match?match[0]:clean);
+  const jsonStr=match?match[0]:clean;
+parsed=JSON.parse(jsonStr.replace(/[\x00-\x1F\x7F]/g," "));
+
 } catch(e) {
   throw new Error("JSON invalide : "+text.slice(0,100));
 }
