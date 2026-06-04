@@ -88,11 +88,19 @@ function App(){
   };
 
   const searchZalando = async (term) => {
-    const url = `https://zalando-api2.p.rapidapi.com/scrapers/api/zalando/product/search?mot-cl%C3%A9=${encodeURIComponent(term)}&page=1&country_code=fr`;
-    const res = await fetch(url, {method:"GET",headers:{"x-rapidapi-host":"zalando-api2.p.rapidapi.com","x-rapidapi-key":RAPIDAPI_KEY}});
-    const data = await res.json();
-    const items = data?.results || data?.products || data?.data || [];
-    return (Array.isArray(items) ? items : []).map(p => ({...p, _source:"Zalando"}));
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
+    try {
+      const url = `https://zalando-api2.p.rapidapi.com/scrapers/api/zalando/product/search?mot-cl%C3%A9=${encodeURIComponent(term)}&page=1&country_code=fr`;
+      const res = await fetch(url, {method:"GET",signal:controller.signal,headers:{"x-rapidapi-host":"zalando-api2.p.rapidapi.com","x-rapidapi-key":RAPIDAPI_KEY}});
+      const data = await res.json();
+      const items = data?.results || data?.products || data?.data || [];
+      return (Array.isArray(items) ? items : []).map(p => ({...p, _source:"Zalando"}));
+    } catch(e) {
+      return [];
+    } finally {
+      clearTimeout(timeout);
+    }
   };
 
   const search = async (q) => {
