@@ -16,14 +16,14 @@ body{background:linear-gradient(135deg,#1a0a0a 0%,#2d1515 40%,#1a0a1a 100%);min-
 <div id="root"></div>
 <script type="text/babel">
 const {useState} = React;
+const gold="#c9956a";
+const card={background:"rgba(255,255,255,0.03)",border:"1px solid rgba(201,149,106,0.2)",borderRadius:20,padding:"28px 24px",width:"100%",maxWidth:540};
+const btnPrimary={flex:1,padding:"13px",background:"linear-gradient(135deg,#c9956a,#a07040)",border:"none",borderRadius:12,color:"#fff",fontSize:14,fontFamily:"Georgia,serif",cursor:"pointer"};
+const btnOff={flex:1,padding:"13px",background:"rgba(201,149,106,0.1)",border:"none",borderRadius:12,color:"#5a4030",fontSize:14,fontFamily:"Georgia,serif",cursor:"not-allowed"};
+const btnBack={padding:"13px 18px",background:"transparent",border:"1px solid rgba(201,149,106,0.3)",borderRadius:12,color:"#7a6050",fontSize:14,fontFamily:"Georgia,serif",cursor:"pointer"};
+const btnOutline={width:"100%",padding:"13px",background:"transparent",border:"1px solid rgba(201,149,106,0.4)",borderRadius:12,color:gold,fontSize:14,fontFamily:"Georgia,serif",cursor:"pointer",marginTop:10};
 
-const LINKS = {
-  zara:"https://www.zara.com/fr/",mango:"https://shop.mango.com/fr/",
-  asos:"https://www.asos.com/fr/",laredoute:"https://www.laredoute.fr/",
-  modanisa:"https://www.modanisa.com/fr/",shein:"https://www.shein.com/fr/",
-  hm:"https://www2.hm.com/fr_fr/",cos:"https://www.cos.com/fr_fr/",
-  stories:"https://www.stories.com/fr_fr/"
-};
+const LINKS={zara:"https://www.zara.com/fr/",mango:"https://shop.mango.com/fr/",asos:"https://www.asos.com/fr/",laredoute:"https://www.laredoute.fr/",modanisa:"https://www.modanisa.com/fr/",shein:"https://www.shein.com/fr/",hm:"https://www2.hm.com/fr_fr/",cos:"https://www.cos.com/fr_fr/",stories:"https://www.stories.com/fr_fr/"};
 
 function getLink(m){
   if(!m)return LINKS.asos;
@@ -34,19 +34,22 @@ function getLink(m){
   if(s.includes("redoute"))return LINKS.laredoute;
   if(s.includes("modanisa"))return LINKS.modanisa;
   if(s.includes("shein"))return LINKS.shein;
-  if(s.includes("h&m")||s.includes("h&m"))return LINKS.hm;
+  if(s.includes("h&m")||s.includes("hm"))return LINKS.hm;
   if(s.includes("cos"))return LINKS.cos;
   if(s.includes("stories"))return LINKS.stories;
   return LINKS.asos;
 }
 
-const gold="#c9956a",dark="#1a0a0a";
-
-const card={background:"rgba(255,255,255,0.03)",border:"1px solid rgba(201,149,106,0.2)",borderRadius:20,padding:"28px 24px",width:"100%",maxWidth:540};
-const btnPrimary={flex:1,padding:"13px",background:"linear-gradient(135deg,#c9956a,#a07040)",border:"none",borderRadius:12,color:"#fff",fontSize:14,fontFamily:"Georgia,serif",cursor:"pointer"};
-const btnOff={flex:1,padding:"13px",background:"rgba(201,149,106,0.1)",border:"none",borderRadius:12,color:"#5a4030",fontSize:14,fontFamily:"Georgia,serif",cursor:"not-allowed"};
-const btnBack={padding:"13px 18px",background:"transparent",border:"1px solid rgba(201,149,106,0.3)",borderRadius:12,color:"#7a6050",fontSize:14,fontFamily:"Georgia,serif",cursor:"pointer"};
-const btnOutline={width:"100%",padding:"13px",background:"transparent",border:"1px solid rgba(201,149,106,0.4)",borderRadius:12,color:gold,fontSize:14,fontFamily:"Georgia,serif",cursor:"pointer",marginTop:10};
+function safeParseJSON(text){
+  const cleaned=text
+    .replace(/```json/gi,"")
+    .replace(/```/g,"")
+    .replace(/[\u0000-\u001F\u007F]/g," ")
+    .trim();
+  const match=cleaned.match(/\{[\s\S]*\}/);
+  if(!match)throw new Error("Pas de JSON trouvé");
+  return JSON.parse(match[0]);
+}
 
 function App(){
   const [step,setStep]=useState(0);
@@ -54,56 +57,39 @@ function App(){
   const [result,setResult]=useState(null);
   const [loading,setLoading]=useState(false);
   const [error,setError]=useState("");
-
   const pick=(k,v)=>setForm(f=>({...f,[k]:v}));
 
   const generate=async()=>{
     setLoading(true);setError("");setResult(null);
-    const niv=form.niveau==="orthodoxe"?"Orthodoxe : coudes, genoux, cou couverts en permanence":"Traditionnel : longueurs midi, bras couverts";
-    const bud=form.budget==="petit"?"moins de 50€":form.budget==="moyen"?"50 à 150€":"150€ et plus";
-    const prompt=`Tu es une styliste experte en mode tsniout pour femmes juives pratiquantes.
-Profil : niveau ${niv}, occasion ${form.occasion}, style ${form.style}, saison ${form.saison}, budget ${bud}.
-Marques autorisées UNIQUEMENT : Zara, Mango, Asos, La Redoute, Modanisa, Shein, H&M, COS, & Other Stories
-Réponds UNIQUEMENT en JSON valide sans backticks ni markdown :
-{"titre":"...","description":"...","pieces":[{"type":"...","description":"...","marque":"...","prix_estime":"...","pourquoi_tsniout":"..."}],"conseil_styliste":"...","palette":["#hex1","#hex2","#hex3"]}`;
+    const niv=form.niveau==="orthodoxe"?"Orthodoxe coudes genoux cou couverts en permanence":"Traditionnel longueurs midi bras couverts";
+    const bud=form.budget==="petit"?"moins de 50 euros":form.budget==="moyen"?"50 a 150 euros":"150 euros et plus";
+    const prompt="Tu es une styliste experte en mode tsniout pour femmes juives pratiquantes. Profil: niveau "+niv+", occasion "+form.occasion+", style "+form.style+", saison "+form.saison+", budget "+bud+". Marques autorisees UNIQUEMENT: Zara, Mango, Asos, La Redoute, Modanisa, Shein, H&M, COS, Other Stories. Reponds UNIQUEMENT en JSON valide sans backticks ni markdown. Format: {\"titre\":\"...\",\"description\":\"...\",\"pieces\":[{\"type\":\"...\",\"description\":\"...\",\"marque\":\"...\",\"prix_estime\":\"...\",\"pourquoi_tsniout\":\"...\"}],\"conseil_styliste\":\"...\",\"palette\":[\"#hex1\",\"#hex2\",\"#hex3\"]}";
     try{
-  const res = await fetch("/api/chat",{
-  method:"POST",
-  headers:{"Content-Type":"application/json"},
-  body:JSON.stringify({prompt})
-});
-const data=await res.json();
-const text=data.text||"";
-
-  if(!text)throw new Error("Réponse vide - debug: "+JSON.stringify(data).slice(0,200));
-
-let parsed;
-try {
-  const clean=text.replace(/```json/g,"").replace(/```/g,"").trim();
-  const match=clean.match(/\{[\s\S]*\}/);
-  const jsonStr=match?match[0]:clean;
-parsed=JSON.parse(jsonStr.replace(/[\x00-\x1F\x7F]/g," "));
-
-} catch(e) {
-  throw new Error("JSON invalide : "+text.slice(0,100));
-}
-setResult(parsed);
-setStep(6);
-    }catch(e){setError("Erreur : "+e.message);}
-    finally{setLoading(false);}
+      const res=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({prompt})});
+      const data=await res.json();
+      const text=data.text||"";
+      if(!text)throw new Error("Réponse vide du serveur");
+      const parsed=safeParseJSON(text);
+      setResult(parsed);
+      setStep(6);
+    }catch(e){
+      setError(e.message);
+    }finally{
+      setLoading(false);
+    }
   };
 
   const reset=()=>{setStep(0);setForm({niveau:"",occasion:"",style:"",saison:"",budget:"moyen"});setResult(null);setError("");};
 
   const OCard=({label,desc,sel,onClick})=>(
-    <div onClick={onClick} style={{padding:"16px 18px",border:`1px solid ${sel?"#c9956a":"rgba(201,149,106,0.2)"}`,borderRadius:14,cursor:"pointer",background:sel?"rgba(201,149,106,0.12)":"transparent",marginBottom:10}}>
+    <div onClick={onClick} style={{padding:"16px 18px",border:"1px solid "+(sel?"#c9956a":"rgba(201,149,106,0.2)"),borderRadius:14,cursor:"pointer",background:sel?"rgba(201,149,106,0.12)":"transparent",marginBottom:10}}>
       <div style={{color:sel?"#f5e6d3":gold,fontWeight:500,fontSize:15,marginBottom:3}}>{label}</div>
       {desc&&<div style={{color:"#7a6050",fontSize:13}}>{desc}</div>}
     </div>
   );
 
   const GCard=({emoji,label,sel,onClick})=>(
-    <div onClick={onClick} style={{padding:"16px 12px",border:`1px solid ${sel?"#c9956a":"rgba(201,149,106,0.2)"}`,borderRadius:14,cursor:"pointer",background:sel?"rgba(201,149,106,0.12)":"transparent",textAlign:"center"}}>
+    <div onClick={onClick} style={{padding:"16px 12px",border:"1px solid "+(sel?"#c9956a":"rgba(201,149,106,0.2)"),borderRadius:14,cursor:"pointer",background:sel?"rgba(201,149,106,0.12)":"transparent",textAlign:"center"}}>
       <div style={{fontSize:22,marginBottom:6}}>{emoji}</div>
       <div style={{color:sel?"#f5e6d3":"#a07860",fontSize:12,lineHeight:1.4}}>{label}</div>
     </div>
@@ -113,7 +99,7 @@ setStep(6);
     <div style={{display:"flex",flexDirection:"column",alignItems:"center",padding:"0 16px 60px"}}>
       <div style={{textAlign:"center",padding:"48px 0 28px",width:"100%",maxWidth:540}}>
         <div style={{fontSize:12,letterSpacing:"0.3em",color:gold,marginBottom:10,textTransform:"uppercase"}}>✦ Styliste Personnelle ✦</div>
-        <h1 style={{fontSize:"clamp(1.8rem,7vw,3rem)",fontWeight:400,background:"linear-gradient(135deg,#f5e6d3,#c9956a,#f5e6d3)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>Tsnioût & Style</h1>
+        <h1 style={{fontSize:"clamp(1.8rem,7vw,3rem)",fontWeight:400,background:"linear-gradient(135deg,#f5e6d3,#c9956a,#f5e6d3)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>Tsnioût et Style</h1>
         <p style={{color:"#a07860",fontSize:14,marginTop:10}}>Mode pudique • Tendance • Authentique</p>
       </div>
 
@@ -138,7 +124,7 @@ setStep(6);
           <h2 style={{fontSize:"1.2rem",fontWeight:400,color:"#f5e6d3",marginBottom:6}}>L'occasion</h2>
           <p style={{color:"#7a6050",fontSize:13,marginBottom:20}}>Pour quand créons-nous cette tenue ?</p>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-            {[["🕯️","Shabbat"],["✨","Fêtes religieuses"],["☀️","Quotidien"],["💼","Travail"],["💫","Soirée / Mariage"],["🌿","Sport / Détente"]].map(([e,l])=>(
+            {[["🕯️","Shabbat"],["✨","Fêtes religieuses"],["☀️","Quotidien"],["💼","Travail"],["💫","Soirée Mariage"],["🌿","Sport Détente"]].map(([e,l])=>(
               <GCard key={l} emoji={e} label={l} sel={form.occasion===l} onClick={()=>pick("occasion",l)}/>
             ))}
           </div>
@@ -154,7 +140,7 @@ setStep(6);
           <h2 style={{fontSize:"1.2rem",fontWeight:400,color:"#f5e6d3",marginBottom:6}}>Mon style</h2>
           <p style={{color:"#7a6050",fontSize:13,marginBottom:20}}>Quelle est ton esthétique ?</p>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-            {[["🖤","Chic & Élégant"],["✌️","Casual & Moderne"],["🌸","Romantique"],["⬜","Minimaliste"]].map(([e,l])=>(
+            {[["🖤","Chic Élégant"],["✌️","Casual Moderne"],["🌸","Romantique"],["⬜","Minimaliste"]].map(([e,l])=>(
               <GCard key={l} emoji={e} label={l} sel={form.style===l} onClick={()=>pick("style",l)}/>
             ))}
           </div>
@@ -198,14 +184,14 @@ setStep(6);
       {loading&&(
         <div style={{...card,textAlign:"center",padding:"48px 24px"}}>
           <div style={{fontSize:36,marginBottom:16}}>✦</div>
-          <p style={{color:gold,fontSize:14}}>Ta styliste compose ta tenue…</p>
+          <p style={{color:gold,fontSize:14}}>Ta styliste compose ta tenue...</p>
         </div>
       )}
 
       {error&&!loading&&(
         <div style={{...card,textAlign:"center"}}>
           <div style={{fontSize:32,marginBottom:12}}>⚠️</div>
-          <p style={{color:gold,marginBottom:20,fontSize:14}}>{error}</p>
+          <p style={{color:gold,marginBottom:20,fontSize:13}}>{error}</p>
           <button style={btnPrimary} onClick={generate}>🔄 Réessayer</button>
           <button style={btnOutline} onClick={()=>setStep(4)}>← Modifier mes choix</button>
         </div>
@@ -214,7 +200,7 @@ setStep(6);
       {step===6&&result&&!loading&&(
         <div style={{width:"100%",maxWidth:540}}>
           <div style={{background:"rgba(201,149,106,0.08)",border:"1px solid rgba(201,149,106,0.3)",borderRadius:20,padding:"28px 24px",marginBottom:14,textAlign:"center"}}>
-            {result.palette?.length>0&&(
+            {result.palette&&result.palette.length>0&&(
               <div style={{display:"flex",justifyContent:"center",gap:10,marginBottom:14}}>
                 {result.palette.map((c,i)=><div key={i} style={{width:22,height:22,borderRadius:"50%",background:c}}/>)}
               </div>
@@ -223,7 +209,7 @@ setStep(6);
             <p style={{color:"#a07860",fontSize:14,lineHeight:1.6}}>{result.description}</p>
           </div>
 
-          {result.pieces?.map((p,i)=>(
+          {result.pieces&&result.pieces.map((p,i)=>(
             <div key={i} style={{background:"rgba(255,255,255,0.03)",border:"1px solid rgba(201,149,106,0.2)",borderRadius:16,padding:"18px 20px",marginBottom:12}}>
               <div style={{fontSize:11,color:gold,textTransform:"uppercase",letterSpacing:"0.15em",marginBottom:6}}>{p.type}</div>
               <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
