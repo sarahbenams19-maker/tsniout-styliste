@@ -42,13 +42,17 @@ const SUGGESTIONS = [
 ];
 
 function getImg(p) {
-  let img = p.imageUrl || p.image || "";
+  let img = p.imageUrl || p.image || p.thumbnail || "";
   if (!img && p.images) img = Array.isArray(p.images) ? (p.images[0]?.url || p.images[0] || "") : "";
+  if (!img && p.media) img = p.media?.[0]?.path || "";
   if (img && !img.startsWith("http")) img = "https://" + img;
   return img;
 }
 
 function getUrl(p) {
+  if (p._source === "Zalando") {
+    return p.url || p.link || `https://www.zalando.fr/`;
+  }
   const slug = p.url || "";
   if (slug.startsWith("http")) return slug;
   if (slug) return "https://www.asos.com" + (slug.startsWith("/") ? "" : "/") + slug;
@@ -59,8 +63,14 @@ function getUrl(p) {
 function getPrice(p) {
   if (p.price?.current?.text) return p.price.current.text;
   if (p.price?.current?.value) return p.price.current.value + " $";
+  if (p.price?.original) return p.price.original;
   if (typeof p.price === 'string') return p.price;
+  if (typeof p.price === 'number') return p.price + " €";
   return "";
+}
+
+function getSource(p) {
+  return p._source || "ASOS";
 }
 
 function App(){
@@ -70,6 +80,21 @@ function App(){
   const [searched, setSearched] = useState(false);
   const [error, setError] = useState("");
 
+  const searchAsos = async (term) => {
+    const url = `https://asos10.p.rapidapi.com/api/v1/getProductListBySearchTerm?searchTerm=${encodeURIComponent(term)}&currency=USD&country=US&store=US&languageShort=en&sizeSchema=US&limit=20&offset=0&sort=recommended`;
+    const res = await fetch(url, {method:"GET",headers:{"x-rapidapi-host":"asos10.p.rapidapi.com","x-rapidapi-key":RAPIDAPI_KEY}});
+    const data = await res.json();
+    return (data?.data?.products || []).map(p => ({...p, _source:"ASOS"}));
+  };
+
+  const searchZalando = async (term) => {
+    const url = `https://zalando-api2.p.rapidapi.com/scrapers/api/zalando/product/search?mot-cl%C3%A9=${encodeURIComponent(term)}&page=1&country_code=fr`;
+    const res = await fetch(url, {method:"GET",headers:{"x-rapidapi-host":"zalando-api2.p.rapidapi.com","x-rapidapi-key":RAPIDAPI_KEY}});
+    const data = await res.json();
+    const items = data?.results || data?.products || data?.data || [];
+    return (Array.isArray(items) ? items : []).map(p => ({...p, _source:"Zalando"}));
+  };
+
   const search = async (q) => {
     const term = q || query;
     if(!term.trim()) return;
@@ -78,18 +103,12 @@ function App(){
     setError("");
     setProducts([]);
     try {
-      const url = `https://asos10.p.rapidapi.com/api/v1/getProductListBySearchTerm?searchTerm=${encodeURIComponent(term)}&currency=USD&country=US&store=US&languageShort=en&sizeSchema=US&limit=20&offset=0&sort=recommended`;
-      const res = await fetch(url, {
-        method: "GET",
-        headers: {
-          "x-rapidapi-host": "asos10.p.rapidapi.com",
-          "x-rapidapi-key": RAPIDAPI_KEY
-        }
-      });
-      const data = await res.json();
-      const items = data?.data?.products || [];
-      if(items.length === 0) setError("Aucun produit trouvé pour \"" + term + "\"");
-      else setProducts(items);
+      const [asos, zalando] = await Promise.allSettled([searchAsos(term), searchZalando(term)]);
+      const asosItems = asos.status === "fulfilled" ? asos.value : [];
+      const zalandoItems = zalando.status === "fulfilled" ? zalando.value : [];
+      const all = [...asosItems, ...zalandoItems];
+      if(all.length === 0) setError("Aucun produit trouvé pour \"" + term + "\"");
+      else setProducts(all);
     } catch(e) {
       setError("Erreur: " + e.message);
     } finally {
@@ -146,7 +165,7 @@ function App(){
                   <div className="card-info">
                     <div className="card-name">{name}</div>
                     {price&&<div className="card-price">{price}</div>}
-                    <a href={url} target="_blank" rel="noopener noreferrer" className="card-btn">Voir sur ASOS →</a>
+                    <a href={url} target="_blank" rel="noopener noreferrer" className="card-btn">Voir sur {getSource(p)} →</a>
                   </div>
                 </div>
               );
