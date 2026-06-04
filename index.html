@@ -75,7 +75,8 @@ Réponds UNIQUEMENT en JSON valide sans backticks ni markdown :
 const data=await res.json();
 const text=data.text||"";
 
-   if(!text)throw new Error("Réponse vide");
+  if(!text)throw new Error("Réponse vide - debug: "+JSON.stringify(data).slice(0,200));
+
 let parsed;
 try {
   const clean=text.replace(/```json/g,"").replace(/```/g,"").trim();
