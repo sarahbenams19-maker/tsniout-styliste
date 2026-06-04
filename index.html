@@ -44,10 +44,24 @@ function safeParseJSON(text){
   if(!text) throw new Error("Texte vide");
   const t=text.replace(/```json/gi,"").replace(/```/g,"").trim();
   try { return JSON.parse(t); } catch(e) {}
-  const match=t.match(/\{[\s\S]*\}/);
-  if(match){ try{ return JSON.parse(match[0]); }catch(e){} }
-  throw new Error("Recu: "+t.slice(0,80));
+  // Réparer le JSON tronqué en fermant les structures ouvertes
+  let fixed=t;
+  try {
+    const match=t.match(/\{[\s\S]*/);
+    if(match){
+      fixed=match[0];
+      // Compter et fermer les accolades manquantes
+      let open=(fixed.match(/\{/g)||[]).length;
+      let close=(fixed.match(/\}/g)||[]).length;
+      // Fermer le dernier tableau si ouvert
+      if((fixed.match(/\[/g)||[]).length>(fixed.match(/\]/g)||[]).length) fixed+='"]';
+      while(open>close){ fixed+="}"; close++; }
+      return JSON.parse(fixed);
+    }
+  } catch(e) {}
+  throw new Error("JSON incomplet");
 }
+
 
 
 
