@@ -33,14 +33,41 @@ body{background:#0f0a0a;min-height:100vh;font-family:Georgia,serif;color:#f5e6d3
 <body>
 <div id="root"></div>
 <script type="text/babel">
-const {useState, useEffect} = React;
+const {useState} = React;
 
 const SUGGESTIONS = [
-  "jupe longue noire","robe midi élégante","chemisier manches longues",
-  "ensemble modest","robe shabbat","jupe plissée midi",
-  "blazer femme","pantalon large élégant","robe mariage modest",
-  "top manches longues","jupe fluide longue","robe automne"
+  "long black skirt","midi dress","long sleeve top",
+  "modest dress","maxi skirt","pleated midi skirt",
+  "blazer women","wide leg trousers","wedding guest dress",
+  "long sleeve blouse","flowy maxi dress","autumn dress"
 ];
+
+function extractProducts(data) {
+  if (!data) return [];
+  // Essayer toutes les structures possibles
+  if (Array.isArray(data)) return data;
+  if (data.products && Array.isArray(data.products)) return data.products;
+  if (data.data && Array.isArray(data.data)) return data.data;
+  if (data.data && data.data.products) return data.data.products;
+  if (data.results && Array.isArray(data.results)) return data.results;
+  if (data.items && Array.isArray(data.items)) return data.items;
+  // Chercher récursivement le premier tableau
+  for (const key of Object.keys(data)) {
+    if (Array.isArray(data[key]) && data[key].length > 0) return data[key];
+  }
+  return [];
+}
+
+function getProductInfo(p) {
+  const name = p.name || p.title || p.productDescription || p.description || "Produit";
+  const price = p.price?.current?.text || p.price?.formatted || p.priceLabel || p.currentPrice || "";
+  const img = p.imageUrl || p.images?.[0]?.url || p.image || p.imageUrls?.[0] || p.thumbnail || "";
+  const id = p.id || p.productId || "";
+  const url = p.url 
+    ? (p.url.startsWith("http") ? p.url : `https://www.asos.com${p.url}`)
+    : `https://www.asos.com/fr/search/?q=${encodeURIComponent(name)}`;
+  return { name, price, img, url, id };
+}
 
 function App(){
   const [query, setQuery] = useState("");
@@ -48,6 +75,7 @@ function App(){
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
   const [error, setError] = useState("");
+  const [debugMsg, setDebugMsg] = useState("");
 
   const search = async (q) => {
     const term = q || query;
@@ -56,30 +84,30 @@ function App(){
     setSearched(true);
     setError("");
     setProducts([]);
+    setDebugMsg("");
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify({query: term})
       });
-      const data = await res.json();
-      const items = data?.products || data?.data?.products || data?.results || [];
-      setProducts(items);
-      if(items.length === 0) setError("Aucun produit trouvé. Essaie un autre mot-clé.");
+      const json = await res.json();
+      setDebugMsg(json.debug || "");
+      const items = extractProducts(json.data || json);
+      if(items.length === 0) {
+        setError("Aucun produit trouvé. Essaie en anglais (ex: long black skirt)");
+      } else {
+        setProducts(items);
+      }
     } catch(e) {
-      setError("Erreur de connexion. Réessaie.");
+      setError("Erreur: " + e.message);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleKey = (e) => {
-    if(e.key === "Enter") search();
-  };
-
   return (
     <div style={{minHeight:"100vh"}}>
-      {/* Header */}
       <div style={{textAlign:"center",padding:"40px 16px 20px"}}>
         <div style={{fontSize:11,letterSpacing:"0.3em",color:"#c9956a",marginBottom:8,textTransform:"uppercase"}}>✦ Mode Pudique ✦</div>
         <h1 style={{fontSize:"clamp(1.6rem,6vw,2.8rem)",fontWeight:400,background:"linear-gradient(135deg,#f5e6d3,#c9956a,#f5e6d3)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",marginBottom:6}}>
@@ -88,36 +116,29 @@ function App(){
         <p style={{color:"#7a6050",fontSize:13}}>Découvre les vraies pièces • Tendance • Pudique</p>
       </div>
 
-      {/* Barre de recherche */}
       <div className="search-bar">
         <input
           className="search-input"
           type="text"
-          placeholder="Ex: jupe noire longue, robe shabbat..."
+          placeholder="Ex: long black skirt, midi dress..."
           value={query}
           onChange={e => setQuery(e.target.value)}
-          onKeyDown={handleKey}
+          onKeyDown={e => e.key==="Enter" && search()}
         />
-        <button className="search-btn" onClick={() => search()}>
-          Rechercher
-        </button>
+        <button className="search-btn" onClick={() => search()}>Rechercher</button>
       </div>
 
-      {/* Suggestions rapides */}
       {!searched && (
         <div style={{textAlign:"center",padding:"8px 16px 24px"}}>
-          <p style={{color:"#5a4030",fontSize:12,marginBottom:10}}>Suggestions populaires :</p>
+          <p style={{color:"#5a4030",fontSize:12,marginBottom:10}}>Suggestions :</p>
           <div>
             {SUGGESTIONS.map(s => (
-              <span key={s} className="tag" onClick={() => { setQuery(s); search(s); }}>
-                {s}
-              </span>
+              <span key={s} className="tag" onClick={() => { setQuery(s); search(s); }}>{s}</span>
             ))}
           </div>
         </div>
       )}
 
-      {/* Loading */}
       {loading && (
         <div className="loading">
           <div style={{fontSize:30,marginBottom:12}}>✦</div>
@@ -125,29 +146,25 @@ function App(){
         </div>
       )}
 
-      {/* Erreur */}
       {error && !loading && (
         <div className="empty">
           <div style={{fontSize:30,marginBottom:12}}>🔍</div>
           <p>{error}</p>
+          {debugMsg && <p style={{fontSize:10,color:"#3a2020",marginTop:8,wordBreak:"break-all"}}>{debugMsg}</p>}
         </div>
       )}
 
-      {/* Grille produits */}
       {!loading && products.length > 0 && (
         <>
           <div style={{padding:"0 16px 8px",color:"#7a6050",fontSize:12,textAlign:"center"}}>
-            {products.length} produits trouvés pour "{query}"
+            {products.length} produits pour "{query}"
           </div>
           <div className="grid">
             {products.map((p, i) => {
-              const name = p.name || p.title || p.productDescription || "Produit";
-              const price = p.price?.current?.text || p.price?.formatted || p.priceLabel || "";
-              const img = p.imageUrl || p.images?.[0]?.url || p.image || "";
-              const url = p.url ? `https://www.asos.com${p.url}` : "https://www.asos.com/fr/";
+              const {name, price, img, url} = getProductInfo(p);
               return (
                 <div key={i} className="card">
-                  {img && <img src={img} alt={name} loading="lazy" onError={e => e.target.style.display='none'}/>}
+                  {img && <img src={img} alt={name} loading="lazy" onError={e => e.target.style.display="none"}/>}
                   <div className="card-info">
                     <div className="card-name">{name}</div>
                     {price && <div className="card-price">{price}</div>}
