@@ -111,8 +111,7 @@ function App(){
       });
       const json = await res.json();
       setDebug(json.firstProduct || "");
-      const items = const items = json.products || [];
-;
+      const items = json.products || [];
       if(items.length === 0) {
         setError("Aucun produit trouvé pour \"" + term + "\"");
       } else {
