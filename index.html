@@ -75,9 +75,17 @@ Réponds UNIQUEMENT en JSON valide sans backticks ni markdown :
 const data=await res.json();
 const text=data.text||"";
 
-      const match=text.match(/\{[\s\S]*\}/);
-      if(!match)throw new Error("Format inattendu");
-      setResult(JSON.parse(match[0]));setStep(6);
+   if(!text)throw new Error("Réponse vide");
+let parsed;
+try {
+  const clean=text.replace(/```json/g,"").replace(/```/g,"").trim();
+  const match=clean.match(/\{[\s\S]*\}/);
+  parsed=JSON.parse(match?match[0]:clean);
+} catch(e) {
+  throw new Error("JSON invalide : "+text.slice(0,100));
+}
+setResult(parsed);
+setStep(6);
     }catch(e){setError("Erreur : "+e.message);}
     finally{setLoading(false);}
   };
