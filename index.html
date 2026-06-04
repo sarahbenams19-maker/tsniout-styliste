@@ -59,15 +59,19 @@ function extractProducts(data) {
 }
 
 function getProductInfo(p) {
-  const name = p.name || p.title || p.productDescription || p.description || "Produit";
-  const price = p.price?.current?.text || p.price?.formatted || p.priceLabel || p.currentPrice || "";
-  const img = p.imageUrl || p.images?.[0]?.url || p.image || p.imageUrls?.[0] || p.thumbnail || "";
-  const id = p.id || p.productId || "";
-  const url = p.url 
-    ? (p.url.startsWith("http") ? p.url : `https://www.asos.com${p.url}`)
+  const name = p.name || p.title || "";
+  const price = p.price?.current?.text || 
+                (p.price?.current?.value ? p.price.current.value + "€" : "") ||
+                p.priceLabel || "";
+  const imgBase = p.imageUrl || p.images?.[0]?.url || "";
+  const img = imgBase ? (imgBase.startsWith("http") ? imgBase : "https://" + imgBase) : "";
+  const productId = p.id || "";
+  const url = productId 
+    ? `https://www.asos.com/fr/${p.url || "product/" + productId}`
     : `https://www.asos.com/fr/search/?q=${encodeURIComponent(name)}`;
-  return { name, price, img, url, id };
+  return { name, price, img, url };
 }
+
 
 function App(){
   const [query, setQuery] = useState("");
