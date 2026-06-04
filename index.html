@@ -41,12 +41,14 @@ function getLink(m){
 }
 
 function safeParseJSON(text){
+  if(!text) throw new Error("Texte vide");
   const t=text.replace(/```json/gi,"").replace(/```/g,"").trim();
   try { return JSON.parse(t); } catch(e) {}
   const match=t.match(/\{[\s\S]*\}/);
-  if(match) return JSON.parse(match[0]);
-  throw new Error("Format non reconnu");
+  if(match){ try{ return JSON.parse(match[0]); }catch(e){} }
+  throw new Error("Recu: "+t.slice(0,80));
 }
+
 
 
 function App(){
