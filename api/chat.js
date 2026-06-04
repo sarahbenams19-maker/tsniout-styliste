@@ -5,7 +5,14 @@ export default async function handler(req, res) {
   if (req.method === "OPTIONS") return res.status(200).end();
 
   try {
-    const query = req.body?.query || req.query?.q || "modest dress";
+    let query = "modest dress";
+    if (req.method === "POST") {
+      const buffers = [];
+      for await (const chunk of req) buffers.push(chunk);
+      const body = JSON.parse(Buffer.concat(buffers).toString());
+      query = body.query || query;
+    }
+
     const response = await fetch(
       `https://asos10.p.rapidapi.com/api/v1/getProductListBySearchTerm?searchTerm=${encodeURIComponent(query)}&currency=EUR&country=US&store=US&languageShort=en&sizeSchema=US&limit=20&offset=0&sort=recommended`,
       {
