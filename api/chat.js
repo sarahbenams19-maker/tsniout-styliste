@@ -5,25 +5,22 @@ export default async function handler(req, res) {
   if (req.method === "OPTIONS") return res.status(200).end();
 
   try {
-    const { niveau, occasion, style, saison, budget } = req.body;
+    const { query } = req.body;
     
-    const prompt = `Styliste tsniout. Genere une tenue JSON pour: niveau=${niveau}, occasion=${occasion}, style=${style}, saison=${saison}, budget=${budget}. Marques: Zara Mango Asos LaRedoute Modanisa Shein HM COS Stories. JSON uniquement: {"titre":"...","description":"...","pieces":[{"type":"...","description":"...","marque":"...","prix_estime":"...","pourquoi_tsniout":"..."},{"type":"...","description":"...","marque":"...","prix_estime":"...","pourquoi_tsniout":"..."},{"type":"...","description":"...","marque":"...","prix_estime":"...","pourquoi_tsniout":"..."}],"conseil_styliste":"...","palette":["#hex1","#hex2","#hex3"]}`;
-
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
-    
-    const response = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.7, maxOutputTokens: 8192 }
-      })
-    });
+    const response = await fetch(
+      `https://asos10.p.rapidapi.com/api/v1/getProductList?q=${encodeURIComponent(query)}&country=FR&lang=fr-FR&currency=EUR&sizeSchema=FR&limit=20`,
+      {
+        method: "GET",
+        headers: {
+          "x-rapidapi-host": "asos10.p.rapidapi.com",
+          "x-rapidapi-key": process.env.RAPIDAPI_KEY
+        }
+      }
+    );
 
     const data = await response.json();
-    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
-    res.status(200).json({ text });
+    res.status(200).json(data);
   } catch(e) {
-    res.status(500).json({ text: "", error: e.message });
+    res.status(500).json({ error: e.message });
   }
 }
