@@ -17,10 +17,11 @@ export default async function handler(req, res) {
       })
     });
 
-    const data = await response.json();
+    const raw = await response.text();
+    console.log("RAW:", raw.slice(0, 500));
+    const data = JSON.parse(raw);
     const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
-    if (!text) return res.status(200).json({ text: "", debug: JSON.stringify(data).slice(0, 300) });
-    res.status(200).json({ text });
+    res.status(200).json({ text, debug: raw.slice(0, 200) });
   } catch(e) {
     res.status(500).json({ text: "", error: e.message });
   }
